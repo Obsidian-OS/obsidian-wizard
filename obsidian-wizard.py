@@ -33,6 +33,7 @@ ADMIN_USER=\"user\"
 ADMIN_DOTFILES=\"\"
 ADMIN_DOTFILES_TYPE=\"\"
 """
+IS_ARCHISO=os.path.isfile("/etc/system.sfs")
 
 def get_terminal_size():
     try:
@@ -208,7 +209,10 @@ def select_system_image(action_type="install"):
     except:
         pass
     
-    options = ["Default System Image", "Create New Config"]
+    options = ["Create New Config"]
+    if IS_ARCHISO:
+        options.append("Default System Image")
+        
     if mkobsfs_files:
         options.append("Pre-configured Images")
         for f in sorted(mkobsfs_files):
@@ -223,7 +227,6 @@ def select_system_image(action_type="install"):
         options.append("Local Directory")
         for f in current_dir_files:
             options.append(f"  ├─ {f}")
-    
     while True:
         choice = selection_menu(
             f"Select System Image for {action_type.title()}", 
