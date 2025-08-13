@@ -386,7 +386,6 @@ def main():
             clear_screen()
             print_centered("Dropping to terminal...", Colors.BRIGHT_GREEN)
             time.sleep(0.5)
-            os.system("fish")
             sys.exit(0)
         elif choice == "Reboot System":
             reboot_system()
@@ -394,7 +393,6 @@ def main():
             clear_screen()
             print_centered("Thanks for using ObsidianOS!", Colors.BRIGHT_CYAN)
             time.sleep(0.5)
-            os.system("fish")
             sys.exit(0)
 
 if __name__ == "__main__":
