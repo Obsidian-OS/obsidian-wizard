@@ -22,7 +22,7 @@ class Colors:
     BRIGHT_YELLOW = '\033[93m'
 
 DEFAULT_MKOBSFS_CONTENT = """BUILD_DIR=\"obsidian_rootfs\"
-PACKAGES=\"base linux linux-firmware networkmanager sudo vim nano efibootmgr python squashfs-tools arch-install-scripts base-devel git gptfdisk wget os-prober\"
+PACKAGES=\"base linux linux-firmware networkmanager sudo vim nano efibootmgr python squashfs-tools arch-install-scripts base-devel git gptfdisk wget os-prober pv\"
 OUTPUT_SFS=\"system.sfs\"
 TIMEZONE=\"\"
 HOSTNAME=\"obsidianbtw\"
