@@ -34,6 +34,7 @@ ADMIN_DOTFILES=\"\"
 ADMIN_DOTFILES_TYPE=\"\"
 """
 IS_ARCHISO=os.path.isfile("/etc/system.sfs")
+OBSIDIANCTL_PATH="obsidianctl" if IS_ARCHISO else "/tmp/obsidianctl/obsidianctl"
 
 def get_terminal_size():
     try:
@@ -339,7 +340,7 @@ def installation_flow(action):
         return
 
     if show_status_screen(action, disk, image_path, dual_boot=dual_boot):
-        command = f"obsidianctl {action.lower()}"
+        command = f"{OBSIDIANCTL_PATH} {action.lower()}"
         if dual_boot:
             command += " --dual-boot"
         command += f" {disk} {image_path}"
@@ -361,7 +362,7 @@ def update_flow(title):
         return
     
     if show_status_screen(title, f"System Slot {slot.upper()}", image_path, slot=slot):
-        command = f"obsidianctl update {slot} {image_path}"
+        command = f"{OBSIDIANCTL_PATH} update {slot} {image_path}"
         run_command(command, f"Updating slot {slot.upper()}")
 
 def reboot_system():
