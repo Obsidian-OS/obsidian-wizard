@@ -400,6 +400,23 @@ def main():
             sys.exit(0)
 
 if __name__ == "__main__":
+    if IS_ARCHISO and not os.path.isfile("/etc/obsidian-wizard-resized"):
+        try:
+            clear_screen()
+            run_command("mount -o remount,size=0 /run/archiso/cowspace", "Resizing tmpfs...")
+            open("/etc/obsidian-wizard-resized", "w").close()
+        except (KeyboardInterrupt, SystemExit):
+            clear_screen()
+            print_centered("Resizing aborted. It is probably a good idea to restart your computer.", Colors.WARNING)
+            time.sleep(0.5)
+        except Exception as e:
+            clear_screen()
+            print_centered("CRITICAL ERROR", Colors.FAIL + Colors.BOLD)
+            print_centered(str(e), Colors.FAIL)
+            print_centered("Please report this bug", Colors.DIM)
+            print_centered("REBOOTING...", Colors.FAIL + Colors.BOLD)
+            time.sleep(5)
+            run_command("sudo reboot", f"Rebooting system due to error {str(e)}...")
     try:
         main()
     except (KeyboardInterrupt, SystemExit):
