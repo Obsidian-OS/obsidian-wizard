@@ -5,6 +5,7 @@ import tty
 import termios
 import tempfile
 import time
+import subprocess
 class Colors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -35,6 +36,12 @@ ADMIN_DOTFILES_TYPE=\"\"
 """
 IS_ARCHISO=os.path.isfile("/etc/system.sfs")
 OBSIDIANCTL_PATH="obsidianctl" if IS_ARCHISO else "/tmp/obsidianctl/obsidianctl"
+CURRENT_SLOT=[l[::-1][0] for l in subprocess.check_output([OBSIDIANCTL_PATH,"status"],text=True).splitlines() if "Slot" in l][1:]
+NEXT_SLOT=="a"
+if CURRENT_SLOT=="b":
+    NEXT_SLOT=="a"
+else:
+    NEXT_SLOT=="b"
 
 def get_terminal_size():
     try:
@@ -392,7 +399,13 @@ def main():
         elif choice == "Update System":
             update_flow("Update")
         elif choice == "Switch Slot and Reboot (temporary)":
-            run_command(f"{OBSIDIANCTL_PATH} switch-once")
+            run_command(f"{OBSIDIANCTL_PATH} switch-once {NEXT_SLOT}")
+            reboot_system()
+            print_centered("Please reboot to switch slots.")
+        elif choice == "Switch Slot and Reboot (permanent)":
+            run_command(f"{OBSIDIANCTL_PATH} switch {NEXT_SLOT}")
+            reboot_system()
+            print_centered("Please reboot to switch slots.")
         elif choice == "Drop to Terminal":
             clear_screen()
             print_centered("Dropping to terminal...", Colors.BRIGHT_GREEN)
