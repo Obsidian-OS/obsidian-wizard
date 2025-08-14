@@ -374,18 +374,25 @@ def main():
         main_options = [
             "Install ObsidianOS",
             "Repair ObsidianOS", 
-            "Update System",
             "Drop to Terminal",
             "Reboot System"
         ]
-        
-        choice = selection_menu("ObsidianOS Installation Wizard", main_options, "What would you like to do?")
+        if not IS_ARCHISO and any("ObsidianOS" in line for line in open("/etc/example.txt", encoding="utf-8")):
+            main_options.extend([
+                "Update System",
+                "Switch Slot and Reboot (temporary)",
+                "Switch Slot and Reboot (permanent)",
+                "Sync slots"
+            ])
+        choice = selection_menu("ARbs - the ARch image Based inStaller", main_options, "What would you like to do?")
         if choice == "Install ObsidianOS":
             installation_flow("Install")
         elif choice == "Repair ObsidianOS":
             update_flow("Repair")
         elif choice == "Update System":
             update_flow("Update")
+        elif choice == "Switch Slot and Reboot (temporary)":
+            run_command(f"{OBSIDIANCTL_PATH} switch-once")
         elif choice == "Drop to Terminal":
             clear_screen()
             print_centered("Dropping to terminal...", Colors.BRIGHT_GREEN)
