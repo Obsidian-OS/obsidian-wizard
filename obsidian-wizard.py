@@ -384,7 +384,7 @@ def main():
             "Drop to Terminal",
             "Reboot System"
         ]
-        if not IS_ARCHISO and any("ObsidianOS" in line for line in open("/etc/example.txt", encoding="utf-8")):
+        if not IS_ARCHISO:
             main_options.extend([
                 "Update System",
                 "Switch Slot and Reboot (temporary)",
@@ -399,13 +399,16 @@ def main():
         elif choice == "Update System":
             update_flow("Update")
         elif choice == "Switch Slot and Reboot (temporary)":
-            run_command(f"{OBSIDIANCTL_PATH} switch-once {NEXT_SLOT}")
+            run_command(f"{OBSIDIANCTL_PATH} switch-once {NEXT_SLOT}", "Switching slot...")
             reboot_system()
             print_centered("Please reboot to switch slots.")
         elif choice == "Switch Slot and Reboot (permanent)":
-            run_command(f"{OBSIDIANCTL_PATH} switch {NEXT_SLOT}")
+            run_command(f"{OBSIDIANCTL_PATH} switch {NEXT_SLOT}", "Switching slot...")
             reboot_system()
             print_centered("Please reboot to switch slots.")
+        elif choice == "Sync slots":
+            run_command(f"{OBSIDIANCTL_PATH} sync {NEXT_SLOT}")
+            print_centered("Slots synced.")
         elif choice == "Drop to Terminal":
             clear_screen()
             print_centered("Dropping to terminal...", Colors.BRIGHT_GREEN)
