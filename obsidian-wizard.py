@@ -403,7 +403,7 @@ if __name__ == "__main__":
     if IS_ARCHISO and not os.path.isfile("/etc/obsidian-wizard-resized"):
         try:
             clear_screen()
-            run_command("mount -o remount,size=0 /run/archiso/cowspace", "Resizing tmpfs...")
+            run_command("mount -o remount,size=75% /run/archiso/cowspace", "Resizing tmpfs...")
             open("/etc/obsidian-wizard-resized", "w").close()
         except (KeyboardInterrupt, SystemExit):
             clear_screen()
