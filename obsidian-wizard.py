@@ -5,6 +5,7 @@ import tty
 import termios
 import tempfile
 import time
+import subprocess
 class Colors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -35,6 +36,12 @@ ADMIN_DOTFILES_TYPE=\"\"
 """
 IS_ARCHISO=os.path.isfile("/etc/system.sfs")
 OBSIDIANCTL_PATH="obsidianctl" if IS_ARCHISO else "/tmp/obsidianctl/obsidianctl"
+CURRENT_SLOT=[l[::-1][0] for l in subprocess.check_output([OBSIDIANCTL_PATH,"status"],text=True).splitlines() if "Slot" in l][1:]
+NEXT_SLOT=="a"
+if CURRENT_SLOT=="b":
+    NEXT_SLOT=="a"
+else:
+    NEXT_SLOT=="b"
 
 def get_terminal_size():
     try:
@@ -374,18 +381,31 @@ def main():
         main_options = [
             "Install ObsidianOS",
             "Repair ObsidianOS", 
-            "Update System",
             "Drop to Terminal",
             "Reboot System"
         ]
-        
-        choice = selection_menu("ObsidianOS Installation Wizard", main_options, "What would you like to do?")
+        if not IS_ARCHISO and any("ObsidianOS" in line for line in open("/etc/example.txt", encoding="utf-8")):
+            main_options.extend([
+                "Update System",
+                "Switch Slot and Reboot (temporary)",
+                "Switch Slot and Reboot (permanent)",
+                "Sync slots"
+            ])
+        choice = selection_menu("ARbs - the ARch image Based inStaller", main_options, "What would you like to do?")
         if choice == "Install ObsidianOS":
             installation_flow("Install")
         elif choice == "Repair ObsidianOS":
             update_flow("Repair")
         elif choice == "Update System":
             update_flow("Update")
+        elif choice == "Switch Slot and Reboot (temporary)":
+            run_command(f"{OBSIDIANCTL_PATH} switch-once {NEXT_SLOT}")
+            reboot_system()
+            print_centered("Please reboot to switch slots.")
+        elif choice == "Switch Slot and Reboot (permanent)":
+            run_command(f"{OBSIDIANCTL_PATH} switch {NEXT_SLOT}")
+            reboot_system()
+            print_centered("Please reboot to switch slots.")
         elif choice == "Drop to Terminal":
             clear_screen()
             print_centered("Dropping to terminal...", Colors.BRIGHT_GREEN)
