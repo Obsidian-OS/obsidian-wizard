@@ -407,7 +407,7 @@ def main():
             reboot_system()
             print_centered("Please reboot to switch slots.")
         elif choice == "Sync slots":
-            run_command(f"{OBSIDIANCTL_PATH} sync {NEXT_SLOT}")
+            run_command(f"{OBSIDIANCTL_PATH} sync {NEXT_SLOT}", "Syncing slots...")
             print_centered("Slots synced.")
         elif choice == "Drop to Terminal":
             clear_screen()
