@@ -39,9 +39,9 @@ OBSIDIANCTL_PATH="obsidianctl" if IS_ARCHISO else "/tmp/obsidianctl/obsidianctl"
 CURRENT_SLOT=[l[::-1][0] for l in subprocess.check_output([OBSIDIANCTL_PATH,"status"],text=True).splitlines() if "Slot" in l][1:]
 NEXT_SLOT="a"
 if CURRENT_SLOT[0]=="b":
-    NEXT_SLOT="a"
+    NEXT_SLOT=="a"
 else:
-    NEXT_SLOT="b"
+    NEXT_SLOT=="b"
 
 def get_terminal_size():
     try:
