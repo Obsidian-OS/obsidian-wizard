@@ -6,6 +6,7 @@ import termios
 import tempfile
 import time
 import subprocess
+import shutil
 class Colors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -35,7 +36,7 @@ ADMIN_DOTFILES=\"\"
 ADMIN_DOTFILES_TYPE=\"\"
 """
 IS_ARCHISO=os.path.isfile("/etc/system.sfs")
-OBSIDIANCTL_PATH="obsidianctl" if IS_ARCHISO else "/tmp/obsidianctl/obsidianctl"
+OBSIDIANCTL_PATH = "obsidianctl" if IS_ARCHISO else (shutil.which("obsidianctl") or "/tmp/obsidianctl/obsidianctl")
 CURRENT_SLOT=[l[::-1][0] for l in subprocess.check_output([OBSIDIANCTL_PATH,"status"],text=True).splitlines() if "Slot" in l][1:]
 NEXT_SLOT="a"
 if CURRENT_SLOT[0]=="b":
