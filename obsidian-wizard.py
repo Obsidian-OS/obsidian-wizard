@@ -373,7 +373,7 @@ def select_system_image(action_type="install"):
             ):
                 return filepath
 
-def show_status_screen(action, disk, image, slot=None, dual_boot=None, partition_sizes=None):
+def show_status_screen(action, disk, image, slot=None, dual_boot=None, partition_sizes=None, file_system_type=None):
     clear_screen()
     width, height = get_terminal_size()
     draw_header()
@@ -394,6 +394,9 @@ def show_status_screen(action, disk, image, slot=None, dual_boot=None, partition
     
     if dual_boot is not None:
         status_info.append(f"Dual Boot: {Colors.BRIGHT_GREEN if dual_boot else Colors.FAIL}{'Yes' if dual_boot else 'No'}{Colors.ENDC}")
+    
+    if file_system_type:
+        status_info.append(f"File System: {Colors.BRIGHT_CYAN}{file_system_type.upper()}{Colors.ENDC}")
     
     for info in status_info:
         print_centered(info)
@@ -504,6 +507,7 @@ def clear_screen():
 
 def advanced_settings_menu():
     partition_sizes = DEFAULT_PARTITION_SIZES.copy()
+    file_system_type = "ext4"
     
     while True:
         clear_screen()
@@ -519,6 +523,7 @@ def advanced_settings_menu():
             f"Root FS Size: {Colors.BRIGHT_CYAN}{partition_sizes['rootfs_size']}{Colors.ENDC}",
             f"ETC Size: {Colors.BRIGHT_CYAN}{partition_sizes['etc_size']}{Colors.ENDC}",
             f"VAR Size: {Colors.BRIGHT_CYAN}{partition_sizes['var_size']}{Colors.ENDC}",
+            f"File System Type: {Colors.BRIGHT_CYAN}{file_system_type.upper()}{Colors.ENDC}",
             "Reset to Defaults",
             "Save and Continue"
         ]
@@ -544,21 +549,28 @@ def advanced_settings_menu():
             new_size = input(f"Enter new VAR size (default: {DEFAULT_PARTITION_SIZES['var_size']}): ").strip()
             if new_size:
                 partition_sizes['var_size'] = new_size
+        elif choice.startswith("File System Type:"):
+            fs_options = ["ext4", "f2fs"]
+            selected_fs = selection_menu("Select File System Type", fs_options, "Choose the file system for your partitions")
+            if selected_fs:
+                file_system_type = selected_fs
         elif choice == "Reset to Defaults":
             partition_sizes = DEFAULT_PARTITION_SIZES.copy()
+            file_system_type = "ext4"
         elif choice == "Save and Continue":
             if confirm(
-                "Save these partition settings and continue?",
-                summary="Partition configuration will be applied",
+                "Save these advanced settings and continue?",
+                summary="Advanced configuration will be applied",
                 details=[
                     f"ESP Size: {partition_sizes['esp_size']}",
                     f"Root FS Size: {partition_sizes['rootfs_size']}",
                     f"ETC Size: {partition_sizes['etc_size']}",
                     f"VAR Size: {partition_sizes['var_size']}",
+                    f"File System Type: {file_system_type.upper()}",
                     "These settings will be used for the installation"
                 ]
             ):
-                return partition_sizes
+                return {"partition_sizes": partition_sizes, "file_system_type": file_system_type}
     
     return None
 
@@ -572,9 +584,11 @@ def installation_flow(action):
         return
     dual_boot = dual_boot_choice.startswith("Enable")
     
-    advanced_settings = advanced_settings_menu()
-    if advanced_settings is None:
+    advanced_settings_result = advanced_settings_menu()
+    if advanced_settings_result is None:
         return
+    partition_sizes = advanced_settings_result["partition_sizes"]
+    file_system_type = advanced_settings_result["file_system_type"]
     
     disks = get_disks()
     if not disks:
@@ -596,14 +610,16 @@ def installation_flow(action):
     if image_path is None:
         return
 
-    if show_status_screen(action, disk, image_path, dual_boot=dual_boot, partition_sizes=advanced_settings):
+    if show_status_screen(action, disk, image_path, dual_boot=dual_boot, partition_sizes=partition_sizes, file_system_type=file_system_type):
         command = f"{OBSIDIANCTL_PATH} {action.lower()}"
         if dual_boot:
             command += " --dual-boot"
-        command += f" --esp-size {advanced_settings['esp_size']}"
-        command += f" --rootfs-size {advanced_settings['rootfs_size']}"
-        command += f" --etc-size {advanced_settings['etc_size']}"
-        command += f" --var-size {advanced_settings['var_size']}"
+        command += f" --esp-size {partition_sizes['esp_size']}"
+        command += f" --rootfs-size {partition_sizes['rootfs_size']}"
+        command += f" --etc-size {partition_sizes['etc_size']}"
+        command += f" --var-size {partition_sizes['var_size']}"
+        if file_system_type == "f2fs":
+            command += " --use-f2fs"
         command += f" {disk} {image_path}"
         run_command(command, f"{action}ing ObsidianOS")
 
