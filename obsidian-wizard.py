@@ -624,6 +624,32 @@ def installation_flow(action):
         run_command(command, f"{action}ing ObsidianOS")
 
 def update_flow(title):
+    disk_selection_options = ["Current Disk", "Select a Disk"]
+    disk_selection_choice = selection_menu(
+        f"Disk Selection for {title}",
+        disk_selection_options,
+        "Choose whether to use the current disk or select a new one"
+    )
+    if disk_selection_choice is None:
+        return
+
+    selected_disk = None
+    if disk_selection_choice == "Select a Disk":
+        disks = get_disks()
+        if not disks:
+            clear_screen()
+            print_centered("NO DISKS DETECTED", Colors.FAIL + Colors.BOLD)
+            print_centered("Please check your system configuration", Colors.WARNING)
+            print("\n")
+            print_centered("Press any key to continue...", Colors.DIM)
+            get_key()
+            return
+        disk_options = [f"{disk}" for disk in disks]
+        disk_choice = selection_menu("Select Target Disk", disk_options, "WARNING: Selected disk will be modified!")
+        if disk_choice is None:
+            return
+        selected_disk = disk_choice.split(' ')[0]
+
     slots = get_current_slots()
     slot_options = [f"Slot {slot.upper()}" for slot in slots]
     slot_choice = selection_menu(
@@ -638,8 +664,11 @@ def update_flow(title):
     if image_path is None:
         return
     
-    if show_status_screen(title, f"System Slot {slot.upper()}", image_path, slot=slot):
+    target_display = selected_disk if selected_disk else f"System Slot {slot.upper()}"
+    if show_status_screen(title, target_display, image_path, slot=slot):
         command = f"{OBSIDIANCTL_PATH} update {slot} {image_path}"
+        if selected_disk:
+            command += f" --device {selected_disk}"
         run_command(command, f"Updating slot {slot.upper()}")
 
 def reboot_system():
