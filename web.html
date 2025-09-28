@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARbs, the obsidianOS installer</title>
+    <link rel="stylesheet" href="https://files.obsidianos.xyz/styles.css">
+    <link rel="icon" href="https://obsidianos.xyz/logo.svg" type="image/svg+xml">
+</head>
+<body>
+    <div class="background-container"></div>
+    <div class="mouse-follower mouse-follower-1"></div>
+    <div class="mouse-follower mouse-follower-2"></div>
+    <div class="mouse-follower mouse-follower-3"></div>
+
+    <nav>
+        <div class="nav-container">
+            <div class="nav-left">
+                <img src="https://obsidianos.xyz/logo.svg" alt="ObsidianOS Logo" class="nav-logo">
+                <a href="https://obsidianos.xyz" class="nav-title">ObsidianOS</a>
+            </div>
+            <div class="nav-links">
+                <a href="https://files.obsidianos.xyz">Downloads</a>
+                <a href="https://wiki.obsidianos.xyz/">Wiki</a>
+                <a href="https://github.com/Obsidian-OS/" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="https://www.reddit.com/r/obsidian_OS/" target="_blank" rel="noopener noreferrer">Reddit</a>
+                <a href="https://dsc.gg/obsidianos" target="_blank" rel="noopener noreferrer">Discord</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <header>
+            <img src="https://obsidianos.xyz/logo.svg" alt="ObsidianOS Logo" class="logo">
+            <h1 class="main-title">ARbs for ObsidianOS</h1>
+            <p class="subtitle">Get obsidianOS up and running as fast as possible</p>
+        </header>
+        
+        <div id="loading-bar" style="display: flex; justify-content: center; align-items: center; height: 100px; margin-bottom: 2rem;">
+            <div class="spinner"></div>
+        </div>
+        <a href="/changelog.php" class="download-btn secondary-btn">View Changelog</a>
+        <a href="https://oddcell.ca/keys" class="download-btn secondary-btn">GPG Keys</a>
+        <section class="features">
+            <div class="card-grid" id="builds-container">
+        </section>
+
+        <section class="install-options">
+            <h2 style="text-align: center; margin-bottom: 2rem; color: var(--accent-blue); font-size: 2rem;">Installation Options</h2>
+            <div class="install-grid">
+                <div class="install-card">
+                    <h2>Step 1:</h2><h2>Launch ARbs</h2>
+                    <p>Install ObsidianOS directly from an existing Arch Linux system using our installer script.</p><br>
+                    <p>Just download this page's URL and run it with bash</p>
+                </div>
+                <div class="install-card">
+                    <h2>Step 1.1: </h2><h2>Quickly launch ARbs</h2>
+                    <p>If you are launching this often, use the following line:</p>
+                    <pre><code>sudo bash -c "$(curl -fsSL https://ba.sh/ARbs)"</code></pre>
+                </div>
+                <div class="install-card">
+                    <h2>Step 2:</h2><h2>Choose your settings</h2>
+                    <p>Configure the soon to be installed with an sfs/mkobsfs file and choose your partitioning scheme</p><br>
+                    <p>YOU NEED AT LEAST 25GB OF SPACE.</p>
+                </div>
+                <div class="install-card">
+                    <h2>Option 3:</h2><h2>Install!</h2>
+                    <p>Hit the big install button and start!.</p>
+                    <a href="https://files.obsidianos.xyz" class="download-btn">INSTALL!</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="community">
+            <h2>Need Help?</h2>
+            <p>Connect with the ObsidianOS community for support and updates.</p>
+            <div class="community-links">
+                <a href="https://www.reddit.com/r/obsidian_OS/" target="_blank" rel="noopener noreferrer" class="community-link">Reddit</a>
+                <a href="https://dsc.gg/obsidianos" target="_blank" rel="noopener noreferrer" class="community-link">Discord</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 ObsidianOS Project</p>
+        <div class="footer-links">
+            <a href="https://wiki.obsidianos.xyz/">Wiki</a>
+            <a href="https://github.com/Obsidian-OS/" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+    </footer>
+</body>
+</html>
