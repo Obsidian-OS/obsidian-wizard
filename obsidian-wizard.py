@@ -25,14 +25,35 @@ class Colors:
     BRIGHT_CYAN = '\033[96m'
     BRIGHT_YELLOW = '\033[93m'
 
-DEFAULT_MKOBSFS_CONTENT = """BUILD_DIR="obsidian_rootfs"
-PACKAGES="base linux linux-firmware networkmanager sudo vim nano efibootmgr python squashfs-tools arch-install-scripts base-devel git gptfdisk wget os-prober pv"
-OUTPUT_SFS="system.sfs"
+DEFAULT_MKOBSFS_CONTENT = """
+:<<:
+Packages can be programs or parts of your system.
+$PACKAGES can be thought of as a mega-package in this situation that has everything needed for boot..
+You may add on packages from https://archlinux.org/packages/ here.
+Reccomended: add the `plasma` package to get a desktop.
+:
+PACKAGES="$PACKAGES"
+:<<:
+Some simple configuration:
+TIMEZONE is your (olson) timezone
+HOSTNAME is the name of your computer
+SERVICES are services. If you added the `plasma` package, we highly reccomend you add `sddm` to services.
+:
 TIMEZONE=""
 HOSTNAME="obsidianbtw"
-YAY_GET="obsidianctl-git"
-ROOT_HAVEPASSWORD="nopassword"
-CUSTOM_SCRIPTS_DIR=""
+SERVICES="$SERVICES"
+:<<:
+YAY_GET is close to packages, but from https://aur.archlinux.org/.
+These are COMMUNITY MADE.
+$YAY_GET is a bunch of obsidianOS tools that are needed.
+: 
+YAY_GET="$YAY_GET"
+:<<:
+This section creates a user that is not root.
+root can do anything, but that also makes it unsafe.
+We HIGHLY RECCOMEND you add a user.
+If you dont know what dotfiles are, we reccomend you do NOT set these.
+:
 ADMIN_USER="user"
 ADMIN_DOTFILES=""
 ADMIN_DOTFILES_TYPE=""
