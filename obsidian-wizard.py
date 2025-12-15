@@ -66,7 +66,8 @@ DEFAULT_PARTITION_SIZES = {
     "var_size": "5G"
 }
 
-IS_ARCHISO = os.path.isfile("/etc/system.sfs")
+IS_ARCHISO_REAL = os.path.isfile("/etc/system.sfs")
+IS_ARCHISO = True
 OBSIDIANCTL_PATH = "obsidianctl" if IS_ARCHISO else (shutil.which("obsidianctl") or "/tmp/obsidianctl/obsidianctl")
 
 def get_current_slots():
@@ -330,7 +331,7 @@ def select_system_image(action_type="install"):
         pass
     
     options = ["Create New Config"]
-    if IS_ARCHISO:
+    if IS_ARCHISO_REAL:
         options.append("Default System Image")
         
     if mkobsfs_files:
