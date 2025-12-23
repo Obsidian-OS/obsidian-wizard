@@ -61,8 +61,8 @@ ADMIN_DOTFILES_TYPE=""
 
 DEFAULT_PARTITION_SIZES = {
     "esp_size": "512M",
-    "rootfs_size": "5G",
-    "etc_size": "5G",
+    "rootfs_size": "10G",
+    "etc_size": "1G",
     "var_size": "5G"
 }
 
