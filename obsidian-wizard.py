@@ -524,6 +524,406 @@ def run_command(command, description):
     print_centered("Press any key to continue...", Colors.DIM)
     get_key()
 
+def is_laptop():
+    """Detect if the system is running on a laptop."""
+    try:
+        # Method 1: Check for battery via sysfs
+        if os.path.exists("/sys/class/power_supply/BAT0") or os.path.exists("/sys/class/power_supply/BAT1"):
+            return True
+
+        # Method 2: Check DMI chassis type
+        result = subprocess.run(["dmidecode", "-s", "chassis-type"],
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            chassis_type = result.stdout.strip().lower()
+            # Common laptop chassis types: 8-12, 14 (notebook), 30 (tablet), 31 (convertible)
+            laptop_types = ["8", "9", "10", "11", "12", "14", "30", "31", "notebook", "laptop", "portable"]
+            if any(ltype in chassis_type for ltype in laptop_types):
+                return True
+
+        # Method 3: Check for lid switch
+        if os.path.exists("/proc/acpi/button/lid"):
+            return True
+
+        return False
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        # Fallback: assume desktop if detection fails
+        return False
+
+def has_wired_connection():
+    """Check if the system has an active wired internet connection."""
+    try:
+        # Check for default gateway
+        result = subprocess.run(["ip", "route", "show", "default"],
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            return False
+
+        # Parse gateway IP
+        lines = result.stdout.strip().split('\n')
+        if not lines:
+            return False
+
+        gateway_line = lines[0]
+        if 'via' not in gateway_line:
+            return False
+
+        gateway_ip = gateway_line.split('via')[1].split()[0]
+
+        # Check if gateway is reachable
+        ping_result = subprocess.run(["ping", "-c", "1", "-W", "2", gateway_ip],
+                                   capture_output=True, timeout=3)
+        if ping_result.returncode != 0:
+            return False
+
+        # Check if default interface is wired (not wireless)
+        route_result = subprocess.run(["ip", "route", "get", gateway_ip],
+                                    capture_output=True, text=True, timeout=5)
+        if route_result.returncode == 0:
+            # Look for interface name in output
+            output = route_result.stdout.lower()
+            # If output contains wlan, wlp, or similar wireless indicators, it's wireless
+            wireless_indicators = ['wlan', 'wlp', 'wifi', 'wireless']
+            if any(indicator in output for indicator in wireless_indicators):
+                return False
+
+        return True
+
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError, IndexError):
+        return False
+
+def get_wifi_interfaces():
+    """Get available wireless interfaces."""
+    try:
+        result = subprocess.run(["iwconfig"], capture_output=True, text=True, timeout=10)
+        interfaces = []
+        for line in result.stdout.split('\n'):
+            if 'IEEE 802.11' in line or 'ESSID:' in line:
+                interface = line.split()[0]
+                if interface not in interfaces:
+                    interfaces.append(interface)
+        return interfaces
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        return []
+
+def scan_wifi_networks(interface):
+    """Scan for available WiFi networks using iwlist."""
+    try:
+        result = subprocess.run(["iwlist", interface, "scan"],
+                              capture_output=True, text=True, timeout=15)
+        networks = []
+        current_network = {}
+
+        for line in result.stdout.split('\n'):
+            line = line.strip()
+            if line.startswith('Cell'):
+                if current_network:
+                    networks.append(current_network)
+                current_network = {'cell': line.split()[1]}
+            elif 'ESSID:' in line:
+                essid = line.split('ESSID:')[1].strip().strip('"')
+                current_network['essid'] = essid
+            elif 'Encryption key:' in line:
+                current_network['encrypted'] = 'on' in line.lower()
+            elif 'Quality=' in line:
+                quality_match = re.search(r'Quality=(\d+)/(\d+)', line)
+                if quality_match:
+                    current_network['quality'] = f"{quality_match.group(1)}/{quality_match.group(2)}"
+
+        if current_network:
+            networks.append(current_network)
+
+        # Sort by quality (best first)
+        networks.sort(key=lambda x: x.get('quality', '0/0').split('/')[0], reverse=True)
+        return networks
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        return []
+
+def connect_wifi_iwctl(interface, ssid, password=None):
+    """Connect to WiFi using iwctl (iwd)."""
+    try:
+        # Start iwd if not running
+        subprocess.run(["systemctl", "start", "iwd"], capture_output=True, timeout=5)
+
+        # Connect using iwctl
+        if password:
+            cmd = f"iwctl station {interface} connect '{ssid}' --passphrase '{password}'"
+        else:
+            cmd = f"iwctl station {interface} connect '{ssid}'"
+
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+        return result.returncode == 0, result.stderr if result.returncode != 0 else None
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
+        return False, str(e)
+
+def connect_wifi_nmcli(ssid, password=None):
+    """Connect to WiFi using nmcli (NetworkManager)."""
+    try:
+        if password:
+            cmd = ["nmcli", "device", "wifi", "connect", ssid, "password", password]
+        else:
+            cmd = ["nmcli", "device", "wifi", "connect", ssid]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        return result.returncode == 0, result.stderr if result.returncode != 0 else None
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
+        return False, str(e)
+
+def connect_wifi_wpa(ssid, password=None):
+    """Connect to WiFi using wpa_supplicant."""
+    try:
+        # Create temporary wpa_supplicant config
+        config_content = f'network={{\n    ssid="{ssid}"\n'
+        if password:
+            config_content += f'    psk="{password}"\n'
+        else:
+            config_content += '    key_mgmt=NONE\n'
+        config_content += '}\n'
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.conf', delete=False) as f:
+            f.write(config_content)
+            config_file = f.name
+
+        # Find wireless interface
+        interfaces = get_wifi_interfaces()
+        if not interfaces:
+            return False, "No wireless interfaces found"
+
+        interface = interfaces[0]
+
+        # Connect using wpa_supplicant
+        cmd = ["wpa_supplicant", "-B", "-i", interface, "-c", config_file]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+
+        # Clean up config file
+        os.unlink(config_file)
+
+        if result.returncode == 0:
+            # Wait for DHCP
+            time.sleep(5)
+            return True, None
+        else:
+            return False, result.stderr
+    except (subprocess.SubprocessError, OSError) as e:
+        return False, str(e)
+
+def wifi_connection_menu():
+    """Main WiFi connection menu for laptops."""
+    if not is_laptop():
+        return True  # Skip WiFi setup for desktops
+
+    # Check if wired connection already exists
+    if has_wired_connection():
+        return True  # Skip WiFi setup if wired connection available
+
+    clear_screen()
+    draw_header()
+    print("\n" * 2)
+    print_centered("WiFi Network Setup", Colors.BRIGHT_WHITE + Colors.BOLD)
+    print_centered("Connect to a wireless network for installation", Colors.DIM)
+    print("\n" * 2)
+
+    # Check available WiFi tools
+    wifi_tools = []
+    if shutil.which("iwctl"):
+        wifi_tools.append("iwctl")
+    if shutil.which("nmcli"):
+        wifi_tools.append("nmcli")
+    if shutil.which("wpa_supplicant"):
+        wifi_tools.append("wpa_supplicant")
+
+    if not wifi_tools:
+        print_centered("No WiFi tools detected on this system", Colors.WARNING)
+        print_centered("WiFi setup will be skipped", Colors.DIM)
+        print("\n")
+        print_centered("Press any key to continue...", Colors.DIM)
+        get_key()
+        return False  # Block installation if no WiFi tools available
+
+    # Get wireless interfaces
+    interfaces = get_wifi_interfaces()
+    if not interfaces:
+        print_centered("No wireless interfaces detected", Colors.WARNING)
+        print_centered("WiFi setup will be skipped", Colors.DIM)
+        print("\n")
+        print_centered("Press any key to continue...", Colors.DIM)
+        get_key()
+        return False  # Block installation if no wireless interfaces
+
+    interface = interfaces[0]  # Use first available interface
+
+    # Main WiFi menu options
+    options = [
+        "Scan for Networks",
+        "Manual Connection"
+    ]
+
+    while True:
+        choice = selection_menu("WiFi Setup", options,
+                              f"Using interface: {interface} | Tools: {', '.join(wifi_tools)}")
+
+        if choice is None:
+            return False  # User cancelled, block installation
+
+        elif choice == "Scan for Networks":
+            if not scan_and_connect_wifi(interface, wifi_tools):
+                continue  # Try again
+            return True
+
+        elif choice == "Manual Connection":
+            if not manual_wifi_connection(interface, wifi_tools):
+                continue  # Try again
+            return True
+
+def scan_and_connect_wifi(interface, wifi_tools):
+    """Scan for networks and allow user to select one."""
+    clear_screen()
+    draw_header()
+    print("\n" * 2)
+    print_centered("Scanning for WiFi Networks...", Colors.BRIGHT_CYAN)
+
+    networks = scan_wifi_networks(interface)
+
+    if not networks:
+        print_centered("No networks found", Colors.WARNING)
+        print("\n")
+        print_centered("Press any key to continue...", Colors.DIM)
+        get_key()
+        return False
+
+    # Create menu options
+    network_options = []
+    for i, network in enumerate(networks[:10]):  # Show top 10
+        ssid = network.get('essid', 'Unknown')
+        quality = network.get('quality', 'Unknown')
+        encrypted = "🔒" if network.get('encrypted') else "📡"
+        network_options.append(f"{encrypted} {ssid} (Quality: {quality})")
+
+    network_options.append("Back to WiFi Menu")
+
+    while True:
+        choice = selection_menu("Available Networks", network_options,
+                              "Select a network to connect to")
+
+        if choice is None or choice == "Back to WiFi Menu":
+            return False
+
+        # Extract SSID from choice
+        if "🔒" in choice or "📡" in choice:
+            ssid = choice.split(' ', 2)[1]  # Skip emoji and get SSID
+        else:
+            ssid = choice.split(' ')[0]
+
+        # Find network details
+        selected_network = None
+        for network in networks:
+            if network.get('essid') == ssid:
+                selected_network = network
+                break
+
+        encrypted = selected_network and selected_network.get('encrypted', False)
+
+        # Get password if encrypted
+        password = None
+        if encrypted:
+            clear_screen()
+            draw_header()
+            print("\n" * 2)
+            print_centered(f"Connect to {ssid}", Colors.BRIGHT_WHITE + Colors.BOLD)
+            print_centered("This network requires a password", Colors.DIM)
+            print("\n" * 2)
+            print_centered("Enter password (or leave empty to cancel):", Colors.BRIGHT_CYAN)
+            print_centered("(Password will be hidden)", Colors.DIM)
+            print("\n")
+
+            try:
+                password = input("Password: ").strip()
+                if not password:
+                    continue  # Back to network selection
+            except (KeyboardInterrupt, EOFError):
+                continue
+
+        # Attempt connection
+        success, error = attempt_wifi_connection(ssid, password, interface, wifi_tools)
+
+        if success:
+            print_centered("WiFi connection successful!", Colors.BRIGHT_GREEN)
+            print("\n")
+            print_centered("Press any key to continue...", Colors.DIM)
+            get_key()
+            return True
+        else:
+            print_centered("Connection failed", Colors.FAIL)
+            if error:
+                print_centered(f"Error: {error}", Colors.WARNING)
+            print("\n")
+            print_centered("Press any key to try again...", Colors.DIM)
+            get_key()
+            return False
+
+def manual_wifi_connection(interface, wifi_tools):
+    """Manual WiFi connection with SSID and password input."""
+    clear_screen()
+    draw_header()
+    print("\n" * 2)
+    print_centered("Manual WiFi Connection", Colors.BRIGHT_WHITE + Colors.BOLD)
+    print_centered("Enter network details manually", Colors.DIM)
+    print("\n" * 2)
+
+    print_centered("Network Name (SSID):", Colors.BRIGHT_CYAN)
+    try:
+        ssid = input("SSID: ").strip()
+        if not ssid:
+            return False
+    except (KeyboardInterrupt, EOFError):
+        return False
+
+    print("\n")
+    print_centered("Password (leave empty for open network):", Colors.BRIGHT_CYAN)
+    print_centered("(Password will be hidden)", Colors.DIM)
+    try:
+        password = input("Password: ").strip()
+    except (KeyboardInterrupt, EOFError):
+        return False
+
+    # Attempt connection
+    success, error = attempt_wifi_connection(ssid, password if password else None, interface, wifi_tools)
+
+    if success:
+        print_centered("WiFi connection successful!", Colors.BRIGHT_GREEN)
+        print("\n")
+        print_centered("Press any key to continue...", Colors.DIM)
+        get_key()
+        return True
+    else:
+        print_centered("Connection failed", Colors.FAIL)
+        if error:
+            print_centered(f"Error: {error}", Colors.WARNING)
+        print("\n")
+        print_centered("Press any key to try again...", Colors.DIM)
+        get_key()
+        return False
+
+def attempt_wifi_connection(ssid, password, interface, wifi_tools):
+    """Attempt WiFi connection using available tools."""
+    for tool in wifi_tools:
+        try:
+            if tool == "iwctl":
+                success, error = connect_wifi_iwctl(interface, ssid, password)
+            elif tool == "nmcli":
+                success, error = connect_wifi_nmcli(ssid, password)
+            elif tool == "wpa_supplicant":
+                success, error = connect_wifi_wpa(ssid, password)
+            else:
+                continue
+
+            if success:
+                return True, None
+        except Exception as e:
+            continue
+
+    return False, "All connection methods failed"
+
 def clear_screen():
     os.system('clear')
 
@@ -605,7 +1005,11 @@ def installation_flow(action):
     if dual_boot_choice is None:
         return
     dual_boot = dual_boot_choice.startswith("Enable")
-    
+
+    # NEW: WiFi connection step for laptops
+    if not wifi_connection_menu():
+        return  # WiFi setup failed/blocked
+
     advanced_settings_result = advanced_settings_menu()
     if advanced_settings_result is None:
         return
