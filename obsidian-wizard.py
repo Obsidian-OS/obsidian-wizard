@@ -604,6 +604,147 @@ def clear_screen():
     os.system("clear")
 
 
+def is_laptop():
+    try:
+        with open("/sys/class/dmi/id/chassis_type", "r") as f:
+            chassis_type = int(f.read().strip())
+            laptop_types = [8, 9, 10, 11, 14, 30, 31]
+            return chassis_type in laptop_types
+    except:
+        return False
+
+
+def start_iwd_service():
+    try:
+        subprocess.run(["systemctl", "start", "iwd"], check=True)
+        time.sleep(2)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def get_wifi_networks():
+    try:
+        result = subprocess.run(
+            ["iwctl", "station", "wlan0", "scan"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        time.sleep(3)
+        result = subprocess.run(
+            ["iwctl", "station", "wlan0", "get-networks"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            networks = []
+            lines = result.stdout.split("\n")
+            for line in lines[4:]:
+                if line.strip() and "PSK" in line or "Open" in line:
+                    parts = line.split()
+                    if parts:
+                        ssid = parts[0]
+                        security = "PSK" if "PSK" in line else "Open"
+                        networks.append(f"{ssid} ({security})")
+            return networks
+    except:
+        pass
+    return []
+
+
+def connect_wifi(ssid, password=None):
+    try:
+        if password:
+            result = subprocess.run(
+                ["iwctl", "--password", password, "station", "wlan0", "connect", ssid],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+        else:
+            result = subprocess.run(
+                ["iwctl", "station", "wlan0", "connect", ssid],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+        return result.returncode == 0
+    except:
+        return False
+
+
+def wifi_configuration_menu():
+    clear_screen()
+    draw_header()
+    print("\n" * 2)
+    print_centered("WiFi Configuration", Colors.BRIGHT_WHITE + Colors.BOLD)
+
+    if not is_laptop():
+        print_centered("No laptop detected", Colors.WARNING)
+        print_centered("WiFi configuration is only available on laptops", Colors.DIM)
+        print("\n" * 2)
+        print_centered("Press any key to continue...", Colors.DIM)
+        get_key()
+        return False
+
+    print_centered("Starting iwd service...", Colors.BRIGHT_CYAN)
+    if not start_iwd_service():
+        print_centered("Failed to start iwd service", Colors.FAIL)
+        print("\n" * 2)
+        print_centered("Press any key to continue...", Colors.DIM)
+        get_key()
+        return False
+
+    print_centered("Scanning for networks...", Colors.BRIGHT_CYAN)
+    networks = get_wifi_networks()
+
+    if not networks:
+        print_centered("No WiFi networks found", Colors.WARNING)
+        print("\n" * 2)
+        print_centered("Press any key to continue...", Colors.DIM)
+        get_key()
+        return False
+
+    wifi_options = networks + ["Rescan", "Back"]
+    choice = selection_menu(
+        "Select WiFi Network", wifi_options, "Choose a network to connect to"
+    )
+
+    if choice is None or choice == "Back":
+        return False
+
+    if choice == "Rescan":
+        return wifi_configuration_menu()
+
+    ssid = choice.split(" (")[0]
+    security = choice.split(" (")[1].rstrip(")")
+
+    password = None
+    if security == "PSK":
+        clear_screen()
+        draw_header()
+        print("\n" * 2)
+        print_centered(f"Enter password for {ssid}", Colors.BRIGHT_WHITE + Colors.BOLD)
+        print_centered("Password will not be shown as you type", Colors.DIM)
+        print("\n")
+        password = input("Password: ")
+
+    clear_screen()
+    print_centered("Connecting to WiFi...", Colors.BRIGHT_CYAN)
+    if connect_wifi(ssid, password):
+        print_centered(f"Connected to {ssid} successfully!", Colors.BRIGHT_GREEN)
+        time.sleep(2)
+        return True
+    else:
+        print_centered(f"Failed to connect to {ssid}", Colors.FAIL)
+        print("\n" * 2)
+        print_centered("Press any key to continue...", Colors.DIM)
+        get_key()
+        return False
+
+
 def advanced_settings_menu():
     partition_sizes = DEFAULT_PARTITION_SIZES.copy()
     file_system_type = "ext4"
@@ -706,6 +847,17 @@ def installation_flow(action):
         return
     partition_sizes = advanced_settings_result["partition_sizes"]
     file_system_type = advanced_settings_result["file_system_type"]
+
+    if is_laptop():
+        wifi_choice = selection_menu(
+            "WiFi Configuration",
+            ["Configure WiFi", "Skip WiFi"],
+            "Set up wireless network connection before installation?",
+        )
+        if wifi_choice is None:
+            return
+        if wifi_choice == "Configure WiFi":
+            wifi_configuration_menu()
 
     disks = get_disks()
     if not disks:
