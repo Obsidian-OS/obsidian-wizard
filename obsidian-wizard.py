@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
 import os
-import sys
-import tty
-import termios
-import tempfile
-import time
-import subprocess
-import shutil
 import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import termios
+import time
+import tty
+
 
 class Colors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    DIM = '\033[2m'
-    BRIGHT_WHITE = '\033[97m'
-    BRIGHT_GREEN = '\033[92m'
-    BRIGHT_CYAN = '\033[96m'
-    BRIGHT_YELLOW = '\033[93m'
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    DIM = "\033[2m"
+    BRIGHT_WHITE = "\033[97m"
+    BRIGHT_GREEN = "\033[92m"
+    BRIGHT_CYAN = "\033[96m"
+    BRIGHT_YELLOW = "\033[93m"
+
 
 DEFAULT_MKOBSFS_CONTENT = """
 :<<:
@@ -45,8 +47,8 @@ SERVICES="$SERVICES"
 :<<:
 YAY_GET is close to packages, but from https://aur.archlinux.org/.
 These are COMMUNITY MADE.
-$YAY_GET is a bunch of obsidianOS tools that are needed.
-: 
+$YAY_GET is a bunch of ObsidianOS tools that are needed.
+:
 YAY_GET="$YAY_GET"
 :<<:
 This section creates a user that is not root.
@@ -63,25 +65,33 @@ DEFAULT_PARTITION_SIZES = {
     "esp_size": "512M",
     "rootfs_size": "10G",
     "etc_size": "1G",
-    "var_size": "5G"
+    "var_size": "5G",
 }
 
 IS_ARCHISO_REAL = os.path.isfile("/etc/system.sfs")
 IS_ARCHISO = True
-OBSIDIANCTL_PATH = "obsidianctl" if IS_ARCHISO else (shutil.which("obsidianctl") or "/tmp/obsidianctl/obsidianctl")
+OBSIDIANCTL_PATH = (
+    "obsidianctl"
+    if IS_ARCHISO
+    else (shutil.which("obsidianctl") or "/tmp/obsidianctl/obsidianctl")
+)
+
 
 def get_current_slots():
     try:
-        output = subprocess.check_output([OBSIDIANCTL_PATH, "status"], text=True).splitlines()
+        output = subprocess.check_output(
+            [OBSIDIANCTL_PATH, "status"], text=True
+        ).splitlines()
         slots = []
         for line in output:
             if "Slot" in line:
-                match = re.search(r'Slot\s+([ab])', line)
+                match = re.search(r"Slot\s+([ab])", line)
                 if match:
                     slots.append(match.group(1))
         return slots if slots else ["a", "b"]
     except:
         return ["a", "b"]
+
 
 def get_next_slot():
     current_slots = get_current_slots()
@@ -90,8 +100,10 @@ def get_next_slot():
     current_slot = current_slots[0] if current_slots else "a"
     return "b" if current_slot == "a" else "a"
 
+
 CURRENT_SLOT = get_current_slots()
 NEXT_SLOT = get_next_slot()
+
 
 def get_terminal_size():
     try:
@@ -99,8 +111,9 @@ def get_terminal_size():
     except OSError:
         return 80, 24
 
+
 def draw_box(text, width, style="single"):
-    lines = text.split('\n')
+    lines = text.split("\n")
     max_len = max(len(line) for line in lines) if lines else 0
     content_width = min(max_len + 4, width - 4)
     if style == "double":
@@ -111,7 +124,7 @@ def draw_box(text, width, style="single"):
         top = "┌" + "─" * (content_width - 2) + "┐"
         bottom = "└" + "─" * (content_width - 2) + "┘"
         side = "│"
-    
+
     result = [top]
     for line in lines:
         padding = content_width - len(line) - 2
@@ -119,21 +132,24 @@ def draw_box(text, width, style="single"):
         right_pad = padding - left_pad
         result.append(f"{side}{' ' * left_pad}{line}{' ' * right_pad}{side}")
     result.append(bottom)
-    return '\n'.join(result)
+    return "\n".join(result)
+
 
 def print_centered(text, color="", box_style=None):
     width, _ = get_terminal_size()
     if box_style:
         text = draw_box(text, width, box_style)
-    
-    lines = text.split('\n')
+
+    lines = text.split("\n")
     for line in lines:
         padding = max(0, (width - len(line)) // 2)
         print(" " * padding + color + line + Colors.ENDC)
 
+
 def strip_ansi(text):
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    return ansi_escape.sub('', text)
+    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    return ansi_escape.sub("", text)
+
 
 def draw_header():
     width, _ = get_terminal_size()
@@ -144,9 +160,9 @@ def draw_header():
         f"██║   ██║██████╔╝███████╗██║██║  ██║██║███████║██╔██╗ ██║██║   ██║███████╗",
         f"██║   ██║██╔══██╗╚════██║██║██║  ██║██║██╔══██║██║╚██╗██║██║   ██║╚════██║",
         f"╚██████╔╝██████╔╝███████║██║██████╔╝██║██║  ██║██║ ╚████║╚██████╔╝███████║",
-        f" ╚═════╝ ╚═════╝ ╚══════╝╚═╝╚═════╝ ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝{Colors.ENDC}"
+        f" ╚═════╝ ╚═════╝ ╚══════╝╚═╝╚═════╝ ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝{Colors.ENDC}",
     ]
-    
+
     print()
     for line in logo_lines:
         clean_length = len(strip_ansi(line))
@@ -154,11 +170,13 @@ def draw_header():
         print(" " * padding + line)
     print()
 
+
 def draw_progress_bar(progress, width=40):
     filled = int(width * progress)
     bar = f"{Colors.BRIGHT_GREEN}{'█' * filled}{Colors.DIM}{'░' * (width - filled)}{Colors.ENDC}"
     percentage = f"{Colors.BRIGHT_WHITE}{int(progress * 100)}%{Colors.ENDC}"
     return f"[{bar}] {percentage}"
+
 
 def print_menu_(title, options, selected_index, subtitle=""):
     clear_screen()
@@ -177,9 +195,12 @@ def print_menu_(title, options, selected_index, subtitle=""):
         print_centered(f"  {option}  ", color)
         if i < len(options) - 1:
             print()
-    
+
     print("\n" * 3)
-    print_centered(f"{Colors.DIM}Use ↑↓ to navigate, Enter to select, Q to quit{Colors.ENDC}")
+    print_centered(
+        f"{Colors.DIM}Use ↑↓ to navigate, Enter to select, Q to quit{Colors.ENDC}"
+    )
+
 
 def get_key():
     fd = sys.stdin.fileno()
@@ -187,30 +208,38 @@ def get_key():
     try:
         tty.setraw(sys.stdin.fileno())
         ch = sys.stdin.read(1)
-        if ch == '\x1b':
+        if ch == "\x1b":
             next_chars = sys.stdin.read(2)
             ch += next_chars
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return ch
 
+
 def selection_menu(title, options, subtitle=""):
     selected_index = 0
     while True:
         print_menu_(title, options, selected_index, subtitle)
         key = get_key()
-        if key == '\x1b[A':
+        if key == "\x1b[A":
             selected_index = (selected_index - 1) % len(options)
-        elif key == '\x1b[B':
+        elif key == "\x1b[B":
             selected_index = (selected_index + 1) % len(options)
-        elif key == '\r':
+        elif key == "\r":
             return options[selected_index]
-        elif key == '\x03' or key.lower() == 'q':
+        elif key == "\x03" or key.lower() == "q":
             return None
+
 
 def get_disks():
     try:
-        output = subprocess.check_output(["lsblk", "-d", "-n", "-o", "NAME,SIZE,MODEL"], text=True).strip().split('\n')
+        output = (
+            subprocess.check_output(
+                ["lsblk", "-d", "-n", "-o", "NAME,SIZE,MODEL"], text=True
+            )
+            .strip()
+            .split("\n")
+        )
         disks = []
         for line in output:
             if line.strip():
@@ -218,45 +247,46 @@ def get_disks():
                 if len(parts) >= 2:
                     name = parts[0]
                     size = parts[1]
-                    model = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
+                    model = " ".join(parts[2:]) if len(parts) > 2 else "Unknown"
                     disks.append(f"/dev/{name} ({size}) - {model}")
         return disks
     except Exception:
         return []
+
 
 def confirm(message, warning=False, summary=None, details=None):
     clear_screen()
     width, height = get_terminal_size()
     draw_header()
     print("\n" * 2)
-    
+
     if warning:
         color = Colors.BRIGHT_YELLOW
         icon = "!"
     else:
         color = Colors.BRIGHT_CYAN
         icon = "?"
-    
+
     print_centered(f"{icon} CONFIRMATION {icon}", color)
     print("\n")
     print_centered(message, color)
-    
+
     if summary:
         print("\n")
         print_centered("Summary:", Colors.BRIGHT_WHITE + Colors.BOLD)
         print_centered(summary, Colors.BRIGHT_CYAN)
-    
+
     if details:
         print("\n")
         print_centered("Details:", Colors.BRIGHT_WHITE + Colors.BOLD)
         for detail in details:
             print_centered(f"• {detail}", Colors.DIM)
-    
+
     print("\n" * 2)
-    
+
     options = ["Yes, Continue", "No, Go Back"]
     selected_index = 0
-    
+
     while True:
         for i, option in enumerate(options):
             color = Colors.DIM
@@ -265,12 +295,14 @@ def confirm(message, warning=False, summary=None, details=None):
             print_centered(f"  {option}  ", color)
             if i < len(options) - 1:
                 print()
-        
+
         print("\n" * 2)
-        print_centered(f"{Colors.DIM}Use ↑↓ to navigate, Enter to select, Q to quit{Colors.ENDC}")
-        
+        print_centered(
+            f"{Colors.DIM}Use ↑↓ to navigate, Enter to select, Q to quit{Colors.ENDC}"
+        )
+
         key = get_key()
-        if key == '\x1b[A':
+        if key == "\x1b[A":
             selected_index = (selected_index - 1) % len(options)
             clear_screen()
             draw_header()
@@ -288,7 +320,7 @@ def confirm(message, warning=False, summary=None, details=None):
                 for detail in details:
                     print_centered(f"• {detail}", Colors.DIM)
             print("\n" * 2)
-        elif key == '\x1b[B':
+        elif key == "\x1b[B":
             selected_index = (selected_index + 1) % len(options)
             clear_screen()
             draw_header()
@@ -306,10 +338,11 @@ def confirm(message, warning=False, summary=None, details=None):
                 for detail in details:
                     print_centered(f"• {detail}", Colors.DIM)
             print("\n" * 2)
-        elif key == '\r':
+        elif key == "\r":
             return options[selected_index].startswith("Yes")
-        elif key == '\x03' or key.lower() == 'q':
+        elif key == "\x03" or key.lower() == "q":
             return False
+
 
 def select_system_image(action_type="install"):
     preconf_path = "/usr/preconf"
@@ -321,38 +354,38 @@ def select_system_image(action_type="install"):
                 mkobsfs_files.append(f)
             elif f.endswith(".sfs"):
                 sfs_files.append(f)
-    
+
     current_dir_files = []
     try:
-        for f in os.listdir('.'):
-            if f.endswith('.mkobsfs') or f.endswith('.sfs'):
+        for f in os.listdir("."):
+            if f.endswith(".mkobsfs") or f.endswith(".sfs"):
                 current_dir_files.append(f"[Current Dir] {f}")
     except:
         pass
-    
+
     options = ["Create New Config"]
     if IS_ARCHISO_REAL:
         options.append("Default System Image")
-        
+
     if mkobsfs_files:
         options.append("Pre-configured Images")
         for f in sorted(mkobsfs_files):
             options.append(f"  ├─ {f}")
-    
+
     if sfs_files:
-        options.append("System Images") 
+        options.append("System Images")
         for f in sorted(sfs_files):
             options.append(f"  ├─ {f}")
-    
+
     if current_dir_files:
         options.append("Local Directory")
         for f in current_dir_files:
             options.append(f"  ├─ {f}")
     while True:
         choice = selection_menu(
-            f"Select System Image for {action_type.title()}", 
+            f"Select System Image for {action_type.title()}",
             options,
-            "Choose your system configuration"
+            "Choose your system configuration",
         )
 
         if choice is None:
@@ -364,8 +397,8 @@ def select_system_image(action_type="install"):
                 summary="Default system image will be used",
                 details=[
                     "Path: /etc/system.sfs",
-                    "This is the standard system image for this installation media"
-                ]
+                    "This is the standard system image for this installation media",
+                ],
             ):
                 return "/etc/system.sfs"
         elif choice.startswith("Create"):
@@ -373,7 +406,9 @@ def select_system_image(action_type="install"):
             with open(config_file_path, "w") as f:
                 f.write(DEFAULT_MKOBSFS_CONTENT)
             clear_screen()
-            print_centered("Opening editor for new configuration...", Colors.BRIGHT_GREEN)
+            print_centered(
+                "Opening editor for new configuration...", Colors.BRIGHT_GREEN
+            )
             print_centered("Save and exit when done", Colors.DIM)
             time.sleep(1)
             os.system(f"nano {config_file_path}")
@@ -390,57 +425,76 @@ def select_system_image(action_type="install"):
                 details=[
                     f"Full path: {filepath}",
                     f"File type: {'Configuration' if filepath.endswith('.mkobsfs') else 'System Image'}",
-                    "This file will be used for the installation process"
-                ]
+                    "This file will be used for the installation process",
+                ],
             ):
                 return filepath
 
-def show_status_screen(action, disk, image, slot=None, dual_boot=None, partition_sizes=None, file_system_type=None):
+
+def show_status_screen(
+    action,
+    disk,
+    image,
+    slot=None,
+    dual_boot=None,
+    partition_sizes=None,
+    file_system_type=None,
+):
     clear_screen()
     width, height = get_terminal_size()
     draw_header()
     print("\n" * 2)
-    
-    print_centered(f"FINAL CONFIRMATION - {action.upper()}", Colors.BRIGHT_WHITE + Colors.BOLD)
+
+    print_centered(
+        f"FINAL CONFIRMATION - {action.upper()}", Colors.BRIGHT_WHITE + Colors.BOLD
+    )
     print_centered("Review your settings before proceeding", Colors.DIM)
     print("\n" * 2)
-    
+
     status_info = [
         f"Action: {Colors.BRIGHT_CYAN}{action}{Colors.ENDC}",
         f"Target: {Colors.BRIGHT_GREEN}{disk}{Colors.ENDC}",
-        f"Image: {Colors.BRIGHT_YELLOW}{os.path.basename(image)}{Colors.ENDC}"
+        f"Image: {Colors.BRIGHT_YELLOW}{os.path.basename(image)}{Colors.ENDC}",
     ]
-    
+
     if slot:
         status_info.append(f"Slot: {Colors.BRIGHT_WHITE}{slot.upper()}{Colors.ENDC}")
-    
+
     if dual_boot is not None:
-        status_info.append(f"Dual Boot: {Colors.BRIGHT_GREEN if dual_boot else Colors.FAIL}{'Yes' if dual_boot else 'No'}{Colors.ENDC}")
-    
+        status_info.append(
+            f"Dual Boot: {Colors.BRIGHT_GREEN if dual_boot else Colors.FAIL}{'Yes' if dual_boot else 'No'}{Colors.ENDC}"
+        )
+
     if file_system_type:
-        status_info.append(f"File System: {Colors.BRIGHT_CYAN}{file_system_type.upper()}{Colors.ENDC}")
-    
+        status_info.append(
+            f"File System: {Colors.BRIGHT_CYAN}{file_system_type.upper()}{Colors.ENDC}"
+        )
+
     for info in status_info:
         print_centered(info)
         print()
-    
+
     if partition_sizes:
         print_centered("Partition Configuration:", Colors.BRIGHT_WHITE + Colors.BOLD)
-        print_centered(f"ESP: {Colors.BRIGHT_CYAN}{partition_sizes['esp_size']}{Colors.ENDC} | Root: {Colors.BRIGHT_CYAN}{partition_sizes['rootfs_size']}{Colors.ENDC} | ETC: {Colors.BRIGHT_CYAN}{partition_sizes['etc_size']}{Colors.ENDC} | VAR: {Colors.BRIGHT_CYAN}{partition_sizes['var_size']}{Colors.ENDC}")
+        print_centered(
+            f"ESP: {Colors.BRIGHT_CYAN}{partition_sizes['esp_size']}{Colors.ENDC} | Root: {Colors.BRIGHT_CYAN}{partition_sizes['rootfs_size']}{Colors.ENDC} | ETC: {Colors.BRIGHT_CYAN}{partition_sizes['etc_size']}{Colors.ENDC} | VAR: {Colors.BRIGHT_CYAN}{partition_sizes['var_size']}{Colors.ENDC}"
+        )
         print()
-    
+
     print_centered("⚠️  WARNING ⚠️", Colors.BRIGHT_YELLOW + Colors.BOLD)
     print_centered("This action will modify your system!", Colors.BRIGHT_YELLOW)
     if action.lower() == "install":
-        print_centered(f"All data on {disk} will be destroyed!", Colors.FAIL + Colors.BOLD)
+        print_centered(
+            f"All data on {disk} will be destroyed!", Colors.FAIL + Colors.BOLD
+        )
     print()
-    
+
     print_centered("Are you sure you want to proceed?", Colors.BRIGHT_WHITE)
     print("\n")
-    
+
     options = ["Yes, Execute Now", "No, Cancel"]
     selected_index = 0
-    
+
     while True:
         for i, option in enumerate(options):
             color = Colors.DIM
@@ -449,59 +503,80 @@ def show_status_screen(action, disk, image, slot=None, dual_boot=None, partition
             print_centered(f"  {option}  ", color)
             if i < len(options) - 1:
                 print()
-        
+
         print("\n" * 2)
-        print_centered(f"{Colors.DIM}Use ↑↓ to navigate, Enter to select, Q to quit{Colors.ENDC}")
-        
+        print_centered(
+            f"{Colors.DIM}Use ↑↓ to navigate, Enter to select, Q to quit{Colors.ENDC}"
+        )
+
         key = get_key()
-        if key == '\x1b[A':
+        if key == "\x1b[A":
             selected_index = (selected_index - 1) % len(options)
             clear_screen()
             draw_header()
             print("\n" * 2)
-            print_centered(f"FINAL CONFIRMATION - {action.upper()}", Colors.BRIGHT_WHITE + Colors.BOLD)
+            print_centered(
+                f"FINAL CONFIRMATION - {action.upper()}",
+                Colors.BRIGHT_WHITE + Colors.BOLD,
+            )
             print_centered("Review your settings before proceeding", Colors.DIM)
             print("\n" * 2)
             for info in status_info:
                 print_centered(info)
                 print()
             if partition_sizes:
-                print_centered("Partition Configuration:", Colors.BRIGHT_WHITE + Colors.BOLD)
-                print_centered(f"ESP: {Colors.BRIGHT_CYAN}{partition_sizes['esp_size']}{Colors.ENDC} | Root: {Colors.BRIGHT_CYAN}{partition_sizes['rootfs_size']}{Colors.ENDC} | ETC: {Colors.BRIGHT_CYAN}{partition_sizes['etc_size']}{Colors.ENDC} | VAR: {Colors.BRIGHT_CYAN}{partition_sizes['var_size']}{Colors.ENDC}")
+                print_centered(
+                    "Partition Configuration:", Colors.BRIGHT_WHITE + Colors.BOLD
+                )
+                print_centered(
+                    f"ESP: {Colors.BRIGHT_CYAN}{partition_sizes['esp_size']}{Colors.ENDC} | Root: {Colors.BRIGHT_CYAN}{partition_sizes['rootfs_size']}{Colors.ENDC} | ETC: {Colors.BRIGHT_CYAN}{partition_sizes['etc_size']}{Colors.ENDC} | VAR: {Colors.BRIGHT_CYAN}{partition_sizes['var_size']}{Colors.ENDC}"
+                )
                 print()
             print_centered("⚠️  WARNING ⚠️", Colors.BRIGHT_YELLOW + Colors.BOLD)
             print_centered("This action will modify your system!", Colors.BRIGHT_YELLOW)
             if action.lower() == "install":
-                print_centered(f"All data on {disk} will be destroyed!", Colors.FAIL + Colors.BOLD)
+                print_centered(
+                    f"All data on {disk} will be destroyed!", Colors.FAIL + Colors.BOLD
+                )
             print()
             print_centered("Are you sure you want to proceed?", Colors.BRIGHT_WHITE)
             print("\n")
-        elif key == '\x1b[B':
+        elif key == "\x1b[B":
             selected_index = (selected_index + 1) % len(options)
             clear_screen()
             draw_header()
             print("\n" * 2)
-            print_centered(f"FINAL CONFIRMATION - {action.upper()}", Colors.BRIGHT_WHITE + Colors.BOLD)
+            print_centered(
+                f"FINAL CONFIRMATION - {action.upper()}",
+                Colors.BRIGHT_WHITE + Colors.BOLD,
+            )
             print_centered("Review your settings before proceeding", Colors.DIM)
             print("\n" * 2)
             for info in status_info:
                 print_centered(info)
                 print()
             if partition_sizes:
-                print_centered("Partition Configuration:", Colors.BRIGHT_WHITE + Colors.BOLD)
-                print_centered(f"ESP: {Colors.BRIGHT_CYAN}{partition_sizes['esp_size']}{Colors.ENDC} | Root: {Colors.BRIGHT_CYAN}{partition_sizes['rootfs_size']}{Colors.ENDC} | ETC: {Colors.BRIGHT_CYAN}{partition_sizes['etc_size']}{Colors.ENDC} | VAR: {Colors.BRIGHT_CYAN}{partition_sizes['var_size']}{Colors.ENDC}")
+                print_centered(
+                    "Partition Configuration:", Colors.BRIGHT_WHITE + Colors.BOLD
+                )
+                print_centered(
+                    f"ESP: {Colors.BRIGHT_CYAN}{partition_sizes['esp_size']}{Colors.ENDC} | Root: {Colors.BRIGHT_CYAN}{partition_sizes['rootfs_size']}{Colors.ENDC} | ETC: {Colors.BRIGHT_CYAN}{partition_sizes['etc_size']}{Colors.ENDC} | VAR: {Colors.BRIGHT_CYAN}{partition_sizes['var_size']}{Colors.ENDC}"
+                )
                 print()
             print_centered("⚠️  WARNING ⚠️", Colors.BRIGHT_YELLOW + Colors.BOLD)
             print_centered("This action will modify your system!", Colors.BRIGHT_YELLOW)
             if action.lower() == "install":
-                print_centered(f"All data on {disk} will be destroyed!", Colors.FAIL + Colors.BOLD)
+                print_centered(
+                    f"All data on {disk} will be destroyed!", Colors.FAIL + Colors.BOLD
+                )
             print()
             print_centered("Are you sure you want to proceed?", Colors.BRIGHT_WHITE)
             print("\n")
-        elif key == '\r':
+        elif key == "\r":
             return options[selected_index] == "Yes, Execute Now"
-        elif key == '\x03' or key.lower() == 'q':
+        elif key == "\x03" or key.lower() == "q":
             return False
+
 
 def run_command(command, description):
     clear_screen()
@@ -519,18 +594,20 @@ def run_command(command, description):
         print_centered("Command completed successfully!", Colors.BRIGHT_GREEN)
     else:
         print_centered("Command failed with errors!", Colors.FAIL)
-    
+
     print("\n")
     print_centered("Press any key to continue...", Colors.DIM)
     get_key()
 
+
 def clear_screen():
-    os.system('clear')
+    os.system("clear")
+
 
 def advanced_settings_menu():
     partition_sizes = DEFAULT_PARTITION_SIZES.copy()
     file_system_type = "ext4"
-    
+
     while True:
         clear_screen()
         width, height = get_terminal_size()
@@ -539,7 +616,7 @@ def advanced_settings_menu():
         print_centered("Advanced Settings", Colors.BRIGHT_WHITE + Colors.BOLD)
         print_centered("Configure partition sizes and other options", Colors.DIM)
         print("\n" * 2)
-        
+
         size_options = [
             f"ESP Size: {Colors.BRIGHT_CYAN}{partition_sizes['esp_size']}{Colors.ENDC}",
             f"Root FS Size: {Colors.BRIGHT_CYAN}{partition_sizes['rootfs_size']}{Colors.ENDC}",
@@ -547,33 +624,47 @@ def advanced_settings_menu():
             f"VAR Size: {Colors.BRIGHT_CYAN}{partition_sizes['var_size']}{Colors.ENDC}",
             f"File System Type: {Colors.BRIGHT_CYAN}{file_system_type.upper()}{Colors.ENDC}",
             "Reset to Defaults",
-            "Save and Continue"
+            "Save and Continue",
         ]
-        
-        choice = selection_menu("Advanced Settings", size_options, "Configure partition sizes")
-        
+
+        choice = selection_menu(
+            "Advanced Settings", size_options, "Configure partition sizes"
+        )
+
         if choice is None:
             return None
-        
+
         if choice.startswith("ESP Size:"):
-            new_size = input(f"Enter new ESP size (default: {DEFAULT_PARTITION_SIZES['esp_size']}): ").strip()
+            new_size = input(
+                f"Enter new ESP size (default: {DEFAULT_PARTITION_SIZES['esp_size']}): "
+            ).strip()
             if new_size:
-                partition_sizes['esp_size'] = new_size
+                partition_sizes["esp_size"] = new_size
         elif choice.startswith("Root FS Size:"):
-            new_size = input(f"Enter new Root FS size (default: {DEFAULT_PARTITION_SIZES['rootfs_size']}): ").strip()
+            new_size = input(
+                f"Enter new Root FS size (default: {DEFAULT_PARTITION_SIZES['rootfs_size']}): "
+            ).strip()
             if new_size:
-                partition_sizes['rootfs_size'] = new_size
+                partition_sizes["rootfs_size"] = new_size
         elif choice.startswith("ETC Size:"):
-            new_size = input(f"Enter new ETC size (default: {DEFAULT_PARTITION_SIZES['etc_size']}): ").strip()
+            new_size = input(
+                f"Enter new ETC size (default: {DEFAULT_PARTITION_SIZES['etc_size']}): "
+            ).strip()
             if new_size:
-                partition_sizes['etc_size'] = new_size
+                partition_sizes["etc_size"] = new_size
         elif choice.startswith("VAR Size:"):
-            new_size = input(f"Enter new VAR size (default: {DEFAULT_PARTITION_SIZES['var_size']}): ").strip()
+            new_size = input(
+                f"Enter new VAR size (default: {DEFAULT_PARTITION_SIZES['var_size']}): "
+            ).strip()
             if new_size:
-                partition_sizes['var_size'] = new_size
+                partition_sizes["var_size"] = new_size
         elif choice.startswith("File System Type:"):
             fs_options = ["ext4", "f2fs"]
-            selected_fs = selection_menu("Select File System Type", fs_options, "Choose the file system for your partitions")
+            selected_fs = selection_menu(
+                "Select File System Type",
+                fs_options,
+                "Choose the file system for your partitions",
+            )
             if selected_fs:
                 file_system_type = selected_fs
         elif choice == "Reset to Defaults":
@@ -589,29 +680,33 @@ def advanced_settings_menu():
                     f"ETC Size: {partition_sizes['etc_size']}",
                     f"VAR Size: {partition_sizes['var_size']}",
                     f"File System Type: {file_system_type.upper()}",
-                    "These settings will be used for the installation"
-                ]
+                    "These settings will be used for the installation",
+                ],
             ):
-                return {"partition_sizes": partition_sizes, "file_system_type": file_system_type}
-    
+                return {
+                    "partition_sizes": partition_sizes,
+                    "file_system_type": file_system_type,
+                }
+
     return None
+
 
 def installation_flow(action):
     dual_boot_choice = selection_menu(
-        "Dual Boot Configuration", 
+        "Dual Boot Configuration",
         ["Enable Dual Boot", "Single Boot Only"],
-        "Keep existing OS alongside ObsidianOS?"
+        "Keep existing OS alongside ObsidianOS?",
     )
     if dual_boot_choice is None:
         return
     dual_boot = dual_boot_choice.startswith("Enable")
-    
+
     advanced_settings_result = advanced_settings_menu()
     if advanced_settings_result is None:
         return
     partition_sizes = advanced_settings_result["partition_sizes"]
     file_system_type = advanced_settings_result["file_system_type"]
-    
+
     disks = get_disks()
     if not disks:
         clear_screen()
@@ -623,16 +718,25 @@ def installation_flow(action):
         return
 
     disk_options = [f"{disk}" for disk in disks]
-    disk_choice = selection_menu("Select Target Disk", disk_options, "WARNING: Selected disk will be modified!")
+    disk_choice = selection_menu(
+        "Select Target Disk", disk_options, "WARNING: Selected disk will be modified!"
+    )
     if disk_choice is None:
         return
-    
-    disk = disk_choice.split(' ')[0]
+
+    disk = disk_choice.split(" ")[0]
     image_path = select_system_image(action.lower())
     if image_path is None:
         return
 
-    if show_status_screen(action, disk, image_path, dual_boot=dual_boot, partition_sizes=partition_sizes, file_system_type=file_system_type):
+    if show_status_screen(
+        action,
+        disk,
+        image_path,
+        dual_boot=dual_boot,
+        partition_sizes=partition_sizes,
+        file_system_type=file_system_type,
+    ):
         command = f"{OBSIDIANCTL_PATH} {action.lower()}"
         if dual_boot:
             command += " --dual-boot"
@@ -645,12 +749,13 @@ def installation_flow(action):
         command += f" {disk} {image_path}"
         run_command(command, f"{action}ing ObsidianOS")
 
+
 def update_flow(title):
     disk_selection_options = ["Current Disk", "Select a Disk"]
     disk_selection_choice = selection_menu(
         f"Disk Selection for {title}",
         disk_selection_options,
-        "Choose whether to use the current disk or select a new one"
+        "Choose whether to use the current disk or select a new one",
     )
     if disk_selection_choice is None:
         return
@@ -667,17 +772,19 @@ def update_flow(title):
             get_key()
             return
         disk_options = [f"{disk}" for disk in disks]
-        disk_choice = selection_menu("Select Target Disk", disk_options, "WARNING: Selected disk will be modified!")
+        disk_choice = selection_menu(
+            "Select Target Disk",
+            disk_options,
+            "WARNING: Selected disk will be modified!",
+        )
         if disk_choice is None:
             return
-        selected_disk = disk_choice.split(' ')[0]
+        selected_disk = disk_choice.split(" ")[0]
 
     slots = get_current_slots()
     slot_options = [f"Slot {slot.upper()}" for slot in slots]
     slot_choice = selection_menu(
-        f"Select Slot to {title}", 
-        slot_options,
-        f"Choose which system slot to {title}"
+        f"Select Slot to {title}", slot_options, f"Choose which system slot to {title}"
     )
     if slot_choice is None:
         return
@@ -685,13 +792,14 @@ def update_flow(title):
     image_path = select_system_image("update")
     if image_path is None:
         return
-    
+
     target_display = selected_disk if selected_disk else f"System Slot {slot.upper()}"
     if show_status_screen(title, target_display, image_path, slot=slot):
         command = f"{OBSIDIANCTL_PATH} update {slot} {image_path}"
         if selected_disk:
             command += f" --device {selected_disk}"
         run_command(command, f"Updating slot {slot.upper()}")
+
 
 def reboot_system():
     if confirm(
@@ -701,27 +809,34 @@ def reboot_system():
         details=[
             "All running processes will be terminated",
             "Make sure to save any unsaved work",
-            "The system will boot into the newly installed/updated system"
-        ]
+            "The system will boot into the newly installed/updated system",
+        ],
     ):
         run_command("sudo reboot", "Rebooting system")
+
 
 def main():
     while True:
         main_options = [
             "Install ObsidianOS",
-            "Repair ObsidianOS", 
+            "Repair ObsidianOS",
             "Drop to Terminal",
-            "Reboot System"
+            "Reboot System",
         ]
         if not IS_ARCHISO:
-            main_options.extend([
-                "Update System",
-                "Switch Slot and Reboot (temporary)",
-                "Switch Slot and Reboot (permanent)",
-                "Sync slots"
-            ])
-        choice = selection_menu("ARbs - the ARch image Based inStaller", main_options, "What would you like to do?")
+            main_options.extend(
+                [
+                    "Update System",
+                    "Switch Slot and Reboot (temporary)",
+                    "Switch Slot and Reboot (permanent)",
+                    "Sync slots",
+                ]
+            )
+        choice = selection_menu(
+            "ARbs - the ARch image Based inStaller",
+            main_options,
+            "What would you like to do?",
+        )
         if choice == "Install ObsidianOS":
             installation_flow("Install")
         elif choice == "Repair ObsidianOS":
@@ -729,7 +844,9 @@ def main():
         elif choice == "Update System":
             update_flow("Update")
         elif choice == "Switch Slot and Reboot (temporary)":
-            run_command(f"{OBSIDIANCTL_PATH} switch-once {NEXT_SLOT}", "Switching slot...")
+            run_command(
+                f"{OBSIDIANCTL_PATH} switch-once {NEXT_SLOT}", "Switching slot..."
+            )
             reboot_system()
             print_centered("Please reboot to switch slots.")
         elif choice == "Switch Slot and Reboot (permanent)":
@@ -752,15 +869,25 @@ def main():
             time.sleep(0.5)
             sys.exit(0)
 
+
 if __name__ == "__main__":
-    if IS_ARCHISO and os.path.exists("/run/archiso") and not os.path.isfile("/etc/obsidian-wizard-resized"):
+    if (
+        IS_ARCHISO
+        and os.path.exists("/run/archiso")
+        and not os.path.isfile("/etc/obsidian-wizard-resized")
+    ):
         try:
             clear_screen()
-            run_command("mount -o remount,size=75% /run/archiso/cowspace", "Resizing tmpfs...")
+            run_command(
+                "mount -o remount,size=75% /run/archiso/cowspace", "Resizing tmpfs..."
+            )
             open("/etc/obsidian-wizard-resized", "w").close()
         except (KeyboardInterrupt, SystemExit):
             clear_screen()
-            print_centered("Resizing aborted. It is probably a good idea to restart your computer.", Colors.WARNING)
+            print_centered(
+                "Resizing aborted. It is probably a good idea to restart your computer.",
+                Colors.WARNING,
+            )
             time.sleep(0.5)
         except Exception as e:
             clear_screen()
