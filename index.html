@@ -21,19 +21,7 @@
     <div class="mouse-follower mouse-follower-3"></div>
 
     <nav>
-        <div class="nav-container">
-            <div class="nav-left">
-                <img src="https://obsidianos.xyz/logo.svg" alt="ObsidianOS Logo" class="nav-logo">
-                <a href="https://obsidianos.xyz" class="nav-title">ObsidianOS</a>
-            </div>
-            <div class="nav-links">
-                <a href="https://files.obsidianos.xyz">Downloads</a>
-                <a href="https://wiki.obsidianos.xyz/">Wiki</a>
-                <a href="https://git.obsidianos.xyz/" rel="noopener noreferrer">Git</a>
-                <a href="https://www.reddit.com/r/obsidian_OS/" target="_blank" rel="noopener noreferrer">Reddit</a>
-                <a href="https://dsc.gg/obsidianos" target="_blank" rel="noopener noreferrer">Discord</a>
-            </div>
-        </div>
+        <div class="nav-container" id="nav-container"></div><script>fetch("https://files.obsidianos.xyz/topbar.html").then(r => r.text()).then(html => {document.getElementById("nav-container").innerHTML = html;});</script>
     </nav>
 
     <main>
