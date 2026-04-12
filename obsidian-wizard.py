@@ -98,16 +98,38 @@ def _detect_distro():
             break
         except FileNotFoundError:
             continue
-    return vals.get("ID", "").lower(), vals.get("ID_LIKE", "").lower()
 
-DISTRO_ID, DISTRO_ID_LIKE = _detect_distro()
-IS_ARCH_LIKE   = "arch"   in DISTRO_ID or "arch"   in DISTRO_ID_LIKE
-IS_GENTOO_LIKE = "gentoo" in DISTRO_ID or "gentoo" in DISTRO_ID_LIKE
+    d_id = vals.get("ID", "").lower()
+    name = vals.get("NAME", "").lower()
+    d_name_first = name.split()[0] if name else ""
 
-# Pick the right template for the running distro
-DEFAULT_MKOBSFS_CONTENT = (
-    DEFAULT_MKOBSFS_CONTENT_GENTOO if IS_GENTOO_LIKE else DEFAULT_MKOBSFS_CONTENT_ARCH
-)
+    # If on ObsidianOS ISO, detect it via the package manager
+    if "obsidian" in d_id or "obsidianos" in d_name_first:
+        if shutil.which("pacman"):
+            d_id = "arch"
+        elif shutil.which("emerge"):
+            d_id = "gentoo"
+        elif shutil.which("xbps-install"):
+            d_id = "void"
+        elif shutil.which("apk"):
+            d_id = "alpine"
+        elif shutil.which("apt-get") or shutil.which("apt") or shutil.which("dpkg"):
+            d_id = "debian"
+    return d_id, d_name_first
+    
+DISTROS = ("arch", "gentoo", "void", "alpine", "debian")
+DISTRO_ID, DISTRO_NAME = _detect_distro()
+
+MATCHED_DISTRO = DISTROS[0]
+for distro in DISTROS:
+    is_match = (distro == DISTRO_ID)
+    globals()[f"IS_{distro.upper()}_LIKE"] = is_match
+
+    if is_match:
+        MATCHED_DISTRO = distro
+
+TEMPLATE_CONTENT = f"DEFAULT_MKOBSFS_CONTENT_{MATCHED_DISTRO.upper()}"
+DEFAULT_MKOBSFS_CONTENT = globals().get(TEMPLATE_CONTENT, DEFAULT_MKOBSFS_CONTENT_ARCH)
 
 # True when running from a live ISO/USB (system.sfs is the live image)
 IS_ARCHISO = os.path.isfile("/etc/system.sfs")
