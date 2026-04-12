@@ -683,7 +683,7 @@ def start_iwd_service():
             return True
         except subprocess.CalledProcessError:
             return False
-    elif shutil.which("iwd") or shutil.which("iwctl"):
+    elif shutil.which("iwctl"):
         try:
             subprocess.run(["systemctl", "start", "iwd"], check=True)
             time.sleep(2)
@@ -715,7 +715,7 @@ def _get_wifi_interface():
 
 
 def get_wifi_networks():
-    if shutil.which("iwctl") and shutil.which("iwd") and not shutil.which("rc-service"):
+    if shutil.which("iwctl") and not shutil.which("rc-service"):
         try:
             iface = "wlan0"
             subprocess.run(["iwctl", "station", iface, "scan"],
@@ -727,12 +727,28 @@ def get_wifi_networks():
             )
             if result.returncode == 0:
                 networks = []
-                for line in result.stdout.split("\n")[4:]:
-                    if line.strip() and ("PSK" in line or "Open" in line):
-                        parts = line.split()
-                        if parts:
-                            ssid = parts[0]
-                            security = "PSK" if "PSK" in line else "Open"
+                ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+                clean_stdout = ansi_escape.sub('', result.stdout)
+                lines = clean_stdout.splitlines()
+                dash_count = 0
+                for line in lines:
+                    if "---" in line:
+                        dash_count += 1
+                        continue
+                    if dash_count < 2:
+                        continue
+                    line_clean = line.replace('>', ' ').strip()
+                    if not line_clean:
+                        continue
+                    parts = re.split(r'\s{2,}', line_clean)
+                    if len(parts) >= 2:
+                        ssid = parts[0].strip()
+                        security = "Open"
+                        if "psk" in line.lower():
+                            security = "PSK"
+                        elif "8021x" in line.lower():
+                            security = "802.1X"
+                        if ssid:
                             networks.append(f"{ssid} ({security})")
                 return networks
         except Exception:
@@ -765,11 +781,11 @@ def get_wifi_networks():
 
 
 def connect_wifi(ssid, password=None):
-    if shutil.which("iwctl") and shutil.which("iwd") and not shutil.which("rc-service"):
+    if shutil.which("iwctl") and not shutil.which("rc-service"):
         try:
             if password:
                 result = subprocess.run(
-                    ["iwctl", "--password", password, "station", "wlan0", "connect", ssid],
+                    ["iwctl", "--passphrase", password, "station", "wlan0", "connect", ssid],
                     capture_output=True, text=True, timeout=15,
                 )
             else:
@@ -1114,7 +1130,10 @@ def reboot_system():
             "The system will boot into the newly installed/updated system",
         ],
     ):
-        run_command("sudo reboot", "Rebooting system")
+        if shutil.which("openrc-shutdown"):
+            run_command("sudo openrc-shutdown -r 5", "Rebooting system")
+        else:    
+            run_command("sudo reboot", "Rebooting system")
 
 
 def main():
