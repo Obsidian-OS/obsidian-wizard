@@ -1131,7 +1131,7 @@ def reboot_system():
         ],
     ):
         if shutil.which("openrc-shutdown"):
-            run_command("sudo openrc-shutdown -r 5", "Rebooting system")
+            run_command("sudo openrc-shutdown -r now", "Rebooting system")
         else:    
             run_command("sudo reboot", "Rebooting system")
 
@@ -1202,7 +1202,7 @@ if __name__ == "__main__":
         try:
             clear_screen()
             run_command(
-                "mount -o remount,size=75% /tmp", "Resizing /tmp tmpfs..."
+                "mount -o remount,size=80% /tmp", "Resizing /tmp tmpfs..."
             )
             open("/etc/obsidian-wizard-resized", "w").close()
         except (KeyboardInterrupt, SystemExit):
