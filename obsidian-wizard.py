@@ -1202,7 +1202,7 @@ if __name__ == "__main__":
         try:
             clear_screen()
             run_command(
-                "mount -o remount,size=75% /tmp", "Resizing /tmp tmpfs..."
+                "mount -o remount,size=80% /tmp", "Resizing /tmp tmpfs..."
             )
             open("/etc/obsidian-wizard-resized", "w").close()
         except (KeyboardInterrupt, SystemExit):
